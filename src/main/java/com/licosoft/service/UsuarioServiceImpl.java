@@ -1,5 +1,7 @@
 package com.licosoft.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.licosoft.entity.Usuario;
@@ -22,6 +24,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Usuario login(String usuario, String password) {
+
         Usuario user = usuarioRepository.findByUsuarioAndActivoTrue(usuario)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
@@ -30,5 +33,21 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         return user;
+    }
+
+    // LISTAR USUARIOS
+    @Override
+    public List<Usuario> listarUsuarios() {
+        return usuarioRepository.findAll();
+    }
+
+    // ELIMINAR USUARIO (DESACTIVAR)
+    @Override
+    public void eliminarUsuario(Long id) {
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        usuarioRepository.deleteById(id);
     }
 }

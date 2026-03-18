@@ -19,17 +19,17 @@ import com.licosoft.repository.VentaRepository;
 @Service
 public class VentaServiceImpl implements VentaService {
 
-	@Autowired
-	private ProductoRepository productoRepository;
+    @Autowired
+    private ProductoRepository productoRepository;
 
-	@Autowired
-	private VentaRepository ventaRepository;
-	
+    @Autowired
+    private VentaRepository ventaRepository;
+
     @Override
     public List<Venta> listarVentas() {
         return ventaRepository.findAll();
     }
-    
+
     @Override
     public List<Venta> listarVentasPorFecha(
             LocalDateTime inicio,
@@ -38,66 +38,86 @@ public class VentaServiceImpl implements VentaService {
         return ventaRepository.findByFechaBetween(inicio, fin);
     }
 
-	@Override
-	public Venta registrarVenta(VentaRequestDTO dto) {
+    @Override
+    public Venta registrarVenta(VentaRequestDTO dto) {
 
-		Venta venta = new Venta();
-		venta.setFecha(LocalDateTime.now());
+        Venta venta = new Venta();
 
-		double totalSinDescuento = 0;
-		double totalFinal = 0;
-		double descuentoTotal = 0;
+        // fecha automática de la venta
+        venta.setFecha(LocalDateTime.now());
 
-		List<DetalleVenta> detalles = new ArrayList<>();
+        double totalSinDescuento = 0;
+        double totalFinal = 0;
+        double descuentoTotal = 0;
 
-		for (ItemVentaDTO item : dto.getItems()) {
+        List<DetalleVenta> detalles = new ArrayList<>();
 
-			Producto producto = productoRepository.findById(item.getProductoId())
-					.orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        for (ItemVentaDTO item : dto.getItems()) {
 
-			int cantidad = item.getCantidad();
+            Producto producto = productoRepository.findById(item.getProductoId())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-			if (producto.getStock() < cantidad) {
-				throw new StockInsuficienteException("Stock insuficiente para el producto: " + producto.getNombre());
-			}
+            int cantidad = item.getCantidad();
 
-			double precioNormalUnitario = producto.getPrecioVenta();
-			double totalNormal = precioNormalUnitario * cantidad;
+            if (producto.getStock() < cantidad) {
+                throw new StockInsuficienteException(
+                        "Stock insuficiente para el producto: " + producto.getNombre());
+            }
 
-			double totalVendido = item.getTotalVendido();
+            double precioNormalUnitario = producto.getPrecioVenta();
 
-			if (totalVendido > totalNormal) {
-				throw new RuntimeException("El total vendido no puede ser mayor al precio normal");
-			}
+            double totalNormal = precioNormalUnitario * cantidad;
 
-			double precioUnitarioVendido = totalVendido / cantidad;
-			double descuentoItem = totalNormal - totalVendido;
+            double totalVendido = item.getTotalVendido();
 
-			totalSinDescuento += totalNormal;
-			totalFinal += totalVendido;
-			descuentoTotal += descuentoItem;
+            if (totalVendido > totalNormal) {
+                throw new RuntimeException(
+                        "El total vendido no puede ser mayor al precio normal");
+            }
 
-			// descontar stock
-			producto.setStock(producto.getStock() - cantidad);
-			productoRepository.save(producto);
+            double precioUnitarioVendido = totalVendido / cantidad;
 
-			DetalleVenta detalle = new DetalleVenta();
-			detalle.setProducto(producto);
-			detalle.setCantidad(cantidad);
-			detalle.setPrecioUnitario(precioNormalUnitario);
-			detalle.setPrecioVendido(precioUnitarioVendido);
-			detalle.setSubtotal(totalVendido);
-			detalle.setVenta(venta);
+            double descuentoItem = totalNormal - totalVendido;
 
-			detalles.add(detalle);
-		}
+            totalSinDescuento += totalNormal;
 
-		venta.setTotalSinDescuento(totalSinDescuento);
-		venta.setDescuento(descuentoTotal);
-		venta.setTotalFinal(totalFinal);
-		venta.setDetalles(detalles);
+            totalFinal += totalVendido;
 
-		return ventaRepository.save(venta);
-	}
+            descuentoTotal += descuentoItem;
+
+            // actualizar stock
+            producto.setStock(producto.getStock() - cantidad);
+
+            productoRepository.save(producto);
+
+            DetalleVenta detalle = new DetalleVenta();
+
+            detalle.setProducto(producto);
+
+            detalle.setCantidad(cantidad);
+
+            detalle.setPrecioUnitario(precioNormalUnitario);
+
+            detalle.setPrecioVendido(precioUnitarioVendido);
+
+            detalle.setSubtotal(totalVendido);
+
+            detalle.setVenta(venta);
+
+            detalles.add(detalle);
+        }
+
+        venta.setTotalSinDescuento(totalSinDescuento);
+
+        venta.setDescuento(descuentoTotal);
+
+        venta.setTotalFinal(totalFinal);
+
+        venta.setDetalles(detalles);
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        return ventaGuardada;
+    }
 
 }

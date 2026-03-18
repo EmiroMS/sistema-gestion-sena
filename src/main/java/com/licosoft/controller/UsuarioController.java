@@ -1,11 +1,9 @@
 package com.licosoft.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.licosoft.entity.Usuario;
 import com.licosoft.entity.dto.ApiResponse;
@@ -41,8 +39,23 @@ public class UsuarioController {
                 new ApiResponse<>(
                         true,
                         "Usuario autenticado correctamente",
-                        null
+                        user
                 )
         );
+    }
+
+    // LISTAR USUARIOS
+    @GetMapping
+    public ResponseEntity<List<Usuario>> listarUsuarios() {
+        return ResponseEntity.ok(usuarioService.listarUsuarios());
+    }
+
+    // ELIMINAR USUARIO
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> eliminarUsuario(@PathVariable Long id) {
+
+        usuarioService.eliminarUsuario(id);
+
+        return ResponseEntity.ok("Usuario eliminado correctamente");
     }
 }

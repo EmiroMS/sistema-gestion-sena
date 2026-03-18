@@ -19,23 +19,19 @@ public class Venta {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // Numero de factura POS
 
-    private LocalDateTime fecha;
+    private LocalDateTime fecha; // Fecha de la venta
 
-    private Double totalSinDescuento;
+    private Double totalSinDescuento; // subtotal
 
-    private Double totalConDescuento;
+    private Double descuento; // descuento aplicado
 
-    private Double descuento;
-
-    private Double totalFinal;
+    private Double totalFinal; // total a pagar
 
     private Boolean activa = true;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
     private List<DetalleVenta> detalles;
 
-    // getters y setters
 }
-

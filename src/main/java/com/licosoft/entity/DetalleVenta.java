@@ -30,11 +30,11 @@ public class DetalleVenta {
     private Producto producto;
 
     private Integer cantidad;
-    private Double precioUnitario;   // precio normal
-    private Double precioVendido;    // precio real
-    private Double subtotal;
 
-    // getters y setters
+    private Double precioUnitario; // precio del producto en catálogo
+
+    private Double precioVendido; // precio aplicado en la venta (puede tener descuento)
+
+    private Double subtotal; // cantidad * precioVendido
+
 }
-
-
