@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 public class VentaRequestDTO {
 
-    private List<ItemVentaDTO> items;
-    
+    private String cliente;
 
-    // getters y setters
+    private List<ItemVentaDTO> items;
+
 }

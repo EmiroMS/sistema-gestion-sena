@@ -7,12 +7,17 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.licosoft.entity.Cliente;
 import com.licosoft.entity.DetalleVenta;
 import com.licosoft.entity.Producto;
 import com.licosoft.entity.Venta;
+
 import com.licosoft.entity.dto.ItemVentaDTO;
 import com.licosoft.entity.dto.VentaRequestDTO;
+
 import com.licosoft.exception.StockInsuficienteException;
+
+import com.licosoft.repository.ClienteRepository;
 import com.licosoft.repository.ProductoRepository;
 import com.licosoft.repository.VentaRepository;
 
@@ -25,72 +30,143 @@ public class VentaServiceImpl implements VentaService {
     @Autowired
     private VentaRepository ventaRepository;
 
+    // ✅ NUEVO
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+
     @Override
     public List<Venta> listarVentas() {
         return ventaRepository.findAll();
     }
 
+
     @Override
     public List<Venta> listarVentasPorFecha(
             LocalDateTime inicio,
-            LocalDateTime fin) {
+            LocalDateTime fin){
 
-        return ventaRepository.findByFechaBetween(inicio, fin);
+        return ventaRepository
+                .findByFechaBetween(inicio,fin);
     }
 
+
     @Override
-    public Venta registrarVenta(VentaRequestDTO dto) {
+    public Venta registrarVenta(VentaRequestDTO dto){
 
-        Venta venta = new Venta();
+        Venta venta=new Venta();
 
-        // fecha automática de la venta
         venta.setFecha(LocalDateTime.now());
 
-        double totalSinDescuento = 0;
-        double totalFinal = 0;
-        double descuentoTotal = 0;
 
-        List<DetalleVenta> detalles = new ArrayList<>();
+        // =========================
+        // CLIENTE AUTOMATICO
+        // =========================
 
-        for (ItemVentaDTO item : dto.getItems()) {
+        if(dto.getCliente()!=null &&
+           !dto.getCliente().isBlank()){
 
-            Producto producto = productoRepository.findById(item.getProductoId())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+            Cliente cliente =
+                    clienteRepository
+                    .findByNombre(dto.getCliente())
+                    .orElseGet(()->{
 
-            int cantidad = item.getCantidad();
+                        Cliente nuevo=
+                                new Cliente();
 
-            if (producto.getStock() < cantidad) {
+                        nuevo.setNombre(
+                                dto.getCliente()
+                        );
+
+                        return clienteRepository
+                                .save(nuevo);
+                    });
+
+            venta.setCliente(cliente);
+
+        }
+
+
+        double totalSinDescuento=0;
+
+        double totalFinal=0;
+
+        double descuentoTotal=0;
+
+
+        List<DetalleVenta> detalles=
+                new ArrayList<>();
+
+
+        for(ItemVentaDTO item:dto.getItems()){
+
+            Producto producto=
+                    productoRepository
+                    .findById(
+                            item.getProductoId()
+                    )
+                    .orElseThrow(
+                            ()->new RuntimeException(
+                                    "Producto no encontrado"
+                            )
+                    );
+
+
+            int cantidad=item.getCantidad();
+
+
+            if(producto.getStock()<cantidad){
+
                 throw new StockInsuficienteException(
-                        "Stock insuficiente para el producto: " + producto.getNombre());
+                        "Stock insuficiente para el producto: "
+                        +producto.getNombre()
+                );
             }
 
-            double precioNormalUnitario = producto.getPrecioVenta();
 
-            double totalNormal = precioNormalUnitario * cantidad;
+            double precioNormalUnitario=
+                    producto.getPrecioVenta();
 
-            double totalVendido = item.getTotalVendido();
+            double totalNormal=
+                    precioNormalUnitario*cantidad;
 
-            if (totalVendido > totalNormal) {
+            double totalVendido=
+                    item.getTotalVendido();
+
+
+            if(totalVendido>totalNormal){
+
                 throw new RuntimeException(
-                        "El total vendido no puede ser mayor al precio normal");
+                        "El total vendido no puede ser mayor al precio normal"
+                );
             }
 
-            double precioUnitarioVendido = totalVendido / cantidad;
 
-            double descuentoItem = totalNormal - totalVendido;
+            double precioUnitarioVendido=
+                    totalVendido/cantidad;
 
-            totalSinDescuento += totalNormal;
+            double descuentoItem=
+                    totalNormal-totalVendido;
 
-            totalFinal += totalVendido;
 
-            descuentoTotal += descuentoItem;
+            totalSinDescuento+=totalNormal;
+
+            totalFinal+=totalVendido;
+
+            descuentoTotal+=descuentoItem;
+
 
             // actualizar stock
-            producto.setStock(producto.getStock() - cantidad);
+
+            producto.setStock(
+                    producto.getStock()-cantidad
+            );
 
             productoRepository.save(producto);
 
-            DetalleVenta detalle = new DetalleVenta();
+
+            DetalleVenta detalle=
+                    new DetalleVenta();
 
             detalle.setProducto(producto);
 
@@ -105,19 +181,24 @@ public class VentaServiceImpl implements VentaService {
             detalle.setVenta(venta);
 
             detalles.add(detalle);
+
         }
 
-        venta.setTotalSinDescuento(totalSinDescuento);
 
-        venta.setDescuento(descuentoTotal);
+        venta.setTotalSinDescuento(
+                totalSinDescuento);
 
-        venta.setTotalFinal(totalFinal);
+        venta.setDescuento(
+                descuentoTotal);
+
+        venta.setTotalFinal(
+                totalFinal);
 
         venta.setDetalles(detalles);
 
-        Venta ventaGuardada = ventaRepository.save(venta);
 
-        return ventaGuardada;
+        return ventaRepository.save(venta);
+
     }
 
 }
